@@ -1,3 +1,102 @@
-<script type="module" crossorigin src="/assets/index-D7hcCpyB.js"></script>
-<link rel="stylesheet" crossorigin href="/assets/index-BW3z8eI2.css">
-<div id="root"></div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mikayla & Jesse Meal Planner</title>
+<style>
+body{
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+max-width:700px;
+margin:auto;
+padding:20px;
+background:#f5f5f5;
+}
+h1{text-align:center;}
+.card{
+background:white;
+padding:15px;
+margin:10px 0;
+border-radius:12px;
+box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+input,textarea{
+width:100%;
+padding:10px;
+margin-top:5px;
+box-sizing:border-box;
+}
+button{
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+background:black;
+color:white;
+margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<h1>🍽️ Meal Planner</h1>
+
+<div class="card">
+<h3>Monday</h3>
+<input id="mon" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Tuesday</h3>
+<input id="tue" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Wednesday</h3>
+<input id="wed" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Thursday</h3>
+<input id="thu" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Friday</h3>
+<input id="fri" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Saturday</h3>
+<input id="sat" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>Sunday</h3>
+<input id="sun" placeholder="Dinner">
+</div>
+
+<div class="card">
+<h3>🛒 Grocery List</h3>
+<textarea id="groceries" rows="8"></textarea>
+</div>
+
+<button onclick="saveData()">Save</button>
+
+<script>
+const ids=["mon","tue","wed","thu","fri","sat","sun","groceries"];
+
+function saveData(){
+ids.forEach(id=>{
+localStorage.setItem(id,document.getElementById(id).value);
+});
+alert("Saved!");
+}
+
+ids.forEach(id=>{
+document.getElementById(id).value=
+localStorage.getItem(id)||"";
+});
+</script>
+
+</body>
+</html>
