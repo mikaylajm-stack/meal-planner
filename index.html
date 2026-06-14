@@ -118,7 +118,13 @@ const days=[
 {day:"Thursday",color:"#9bf6ff"},{day:"Friday",color:"#a0c4ff"},{day:"Saturday",color:"#bdb2ff"},
 {day:"Sunday",color:"#ffc6ff"}
 ];
+const todayIndex=new Date().getDay();
 
+const days=[
+...baseDays.slice(todayIndex),
+...baseDays.slice(0,todayIndex)
+];
+  
 let state={plan:{},costco:[],maceys:[],favorites:[],notes:""};
 let selectedDay=null;
 let loading=true;
