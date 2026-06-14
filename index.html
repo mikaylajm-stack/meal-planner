@@ -2,100 +2,122 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mikayla & Jesse Meal Planner</title>
+<title>Meal Planner</title>
 <style>
-body{
-font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-max-width:700px;
-margin:auto;
-padding:20px;
-background:#f5f5f5;
-}
-h1{text-align:center;}
-.card{
-background:white;
-padding:15px;
-margin:10px 0;
-border-radius:12px;
-box-shadow:0 2px 6px rgba(0,0,0,.1);
-}
-input,textarea{
-width:100%;
-padding:10px;
-margin-top:5px;
-box-sizing:border-box;
-}
-button{
-width:100%;
-padding:12px;
-border:none;
-border-radius:10px;
-background:black;
-color:white;
-margin-top:10px;
-}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f6f6;margin:0;padding:18px;max-width:800px;margin:auto}
+h1{text-align:center;font-size:38px}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 12px #0001}
+.day{font-size:26px;font-weight:800;margin-bottom:10px}
+label{font-weight:700;font-size:14px}
+input,textarea{width:100%;box-sizing:border-box;padding:12px;margin:6px 0 12px;border:1px solid #ddd;border-radius:10px;font-size:16px}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color:white;font-size:17px;font-weight:700;margin:8px 0}
+.clear{background:#777}
+.grocery-item{display:flex;gap:10px;align-items:center;background:white;padding:10px;border-radius:10px;margin:6px 0}
 </style>
 </head>
 <body>
 
 <h1>🍽️ Meal Planner</h1>
 
+<div id="planner"></div>
+
 <div class="card">
-<h3>Monday</h3>
-<input id="mon" placeholder="Dinner">
+<h2>🛒 Grocery List</h2>
+<input id="newItem" placeholder="Add grocery item">
+<button onclick="addGrocery()">Add Item</button>
+<div id="groceryList"></div>
 </div>
 
 <div class="card">
-<h3>Tuesday</h3>
-<input id="tue" placeholder="Dinner">
+<h2>📝 Meal Prep Notes</h2>
+<textarea id="notes" rows="5" placeholder="Prep chicken, thaw meat, chop veggies..."></textarea>
 </div>
 
-<div class="card">
-<h3>Wednesday</h3>
-<input id="wed" placeholder="Dinner">
-</div>
-
-<div class="card">
-<h3>Thursday</h3>
-<input id="thu" placeholder="Dinner">
-</div>
-
-<div class="card">
-<h3>Friday</h3>
-<input id="fri" placeholder="Dinner">
-</div>
-
-<div class="card">
-<h3>Saturday</h3>
-<input id="sat" placeholder="Dinner">
-</div>
-
-<div class="card">
-<h3>Sunday</h3>
-<input id="sun" placeholder="Dinner">
-</div>
-
-<div class="card">
-<h3>🛒 Grocery List</h3>
-<textarea id="groceries" rows="8"></textarea>
-</div>
-
-<button onclick="saveData()">Save</button>
+<button onclick="saveData()">Save Everything</button>
+<button class="clear" onclick="clearAll()">Clear Week</button>
 
 <script>
-const ids=["mon","tue","wed","thu","fri","sat","sun","groceries"];
+const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const planner=document.getElementById("planner");
+
+days.forEach(day=>{
+planner.innerHTML+=`
+<div class="card">
+<div class="day">${day}</div>
+<label>Breakfast</label><input id="${day}-breakfast">
+<label>Lunch</label><input id="${day}-lunch">
+<label>Dinner</label><input id="${day}-dinner">
+<label>Notes</label><textarea id="${day}-notes" rows="2"></textarea>
+</div>`;
+});
+
+let groceries=JSON.parse(localStorage.getItem("groceries")||"[]");
 
 function saveData(){
-ids.forEach(id=>{
+days.forEach(day=>{
+["breakfast","lunch","dinner","notes"].forEach(type=>{
+let id=`${day}-${type}`;
 localStorage.setItem(id,document.getElementById(id).value);
 });
+});
+localStorage.setItem("notes",document.getElementById("notes").value);
+localStorage.setItem("groceries",JSON.stringify(groceries));
 alert("Saved!");
 }
 
-ids.forEach(id=>{
-document.getElementById(id).value=
-localStorage.getItem(id)||"";
+function loadData(){
+days.forEach(day=>{
+["breakfast","lunch","dinner","notes"].forEach(type=>{
+let id=`${day}-${type}`;
+document.getElementById(id).value=localStorage.getItem(id)||"";
 });
+});
+document.getElementById("notes").value=localStorage.getItem("notes")||"";
+renderGroceries();
+}
+
+function addGrocery(){
+let item=document.getElementById("newItem").value.trim();
+if(!item)return;
+groceries.push({text:item,done:false});
+document.getElementById("newItem").value="";
+saveData();
+renderGroceries();
+}
+
+function toggleGrocery(i){
+groceries[i].done=!groceries[i].done;
+saveData();
+renderGroceries();
+}
+
+function deleteGrocery(i){
+groceries.splice(i,1);
+saveData();
+renderGroceries();
+}
+
+function renderGroceries(){
+let list=document.getElementById("groceryList");
+list.innerHTML="";
+groceries.forEach((g,i)=>{
+list.innerHTML+=`
+<div class="grocery-item">
+<input type="checkbox" style="width:auto" ${g.done?"checked":""} onchange="toggleGrocery(${i})">
+<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${g.text}</span>
+<button style="width:auto;padding:8px 10px" onclick="deleteGrocery(${i})">x</button>
+</div>`;
+});
+}
+
+function clearAll(){
+if(!confirm("Clear the whole week?"))return;
+localStorage.clear();
+groceries=[];
+loadData();
+}
+
+loadData();
 </script>
 
 </body>
