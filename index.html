@@ -46,23 +46,66 @@ button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color
 
 <script>
 const days=[
-{day:"Monday",emoji:"🌮",color:"#ffd6a5"},
-{day:"Tuesday",emoji:"🍝",color:"#fdffb6"},
-{day:"Wednesday",emoji:"🥗",color:"#caffbf"},
-{day:"Thursday",emoji:"🍔",color:"#9bf6ff"},
-{day:"Friday",emoji:"🍕",color:"#a0c4ff"},
-{day:"Saturday",emoji:"🥩",color:"#bdb2ff"},
-{day:"Sunday",emoji:"🍲",color:"#ffc6ff"}
+{day:"Monday",emoji:"🍽️",color:"#ffd6a5"},
+{day:"Tuesday",emoji:"🍽️",color:"#fdffb6"},
+{day:"Wednesday",emoji:"🍽️",color:"#caffbf"},
+{day:"Thursday",emoji:"🍽️",color:"#9bf6ff"},
+{day:"Friday",emoji:"🍽️",color:"#a0c4ff"},
+{day:"Saturday",emoji:"🍽️",color:"#bdb2ff"},
+{day:"Sunday",emoji:"🍽️",color:"#ffc6ff"}
 ];
+
+const randomFoodEmojis=[
+"🍽️","🥘","🍲","🍛","🍜","🍝","🥗","🌮","🌯","🍕",
+"🍔","🍟","🥪","🥙","🍗","🥩","🍖","🍤","🍣","🍱",
+"🥟","🍚","🍙","🍞","🥐","🥖","🧀","🥔","🥕","🥦"
+];
+
+function randomFoodEmoji(){
+return randomFoodEmojis[Math.floor(Math.random()*randomFoodEmojis.length)];
+}
+
+function getMealEmoji(meal){
+meal=meal.toLowerCase();
+
+if(meal.includes("leftover"))return "🥡";
+if(meal.includes("takeout")||meal.includes("take out"))return "🥢";
+if(meal.includes("date night"))return "🥂";
+if(meal.includes("costco pizza"))return "🍕";
+if(meal.includes("crockpot")||meal.includes("crock pot")||meal.includes("slow cooker"))return "🥘";
+if(meal.includes("smoker")||meal.includes("smoked"))return "🔥";
+if(meal.includes("grill")||meal.includes("grilled"))return "♨️";
+
+if(meal.includes("taco")||meal.includes("burrito")||meal.includes("quesadilla")||meal.includes("mexican")||meal.includes("cafe rio"))return "🌮";
+if(meal.includes("pasta")||meal.includes("spaghetti")||meal.includes("alfredo")||meal.includes("lasagna")||meal.includes("ravioli"))return "🍝";
+if(meal.includes("pizza"))return "🍕";
+if(meal.includes("steak")||meal.includes("beef")||meal.includes("roast"))return "🥩";
+if(meal.includes("chicken")||meal.includes("wings"))return "🍗";
+if(meal.includes("salmon")||meal.includes("fish")||meal.includes("tilapia"))return "🐟";
+if(meal.includes("salad"))return "🥗";
+if(meal.includes("soup")||meal.includes("chili")||meal.includes("stew"))return "🍲";
+if(meal.includes("burger")||meal.includes("sloppy joe"))return "🍔";
+if(meal.includes("sushi"))return "🍣";
+if(meal.includes("breakfast")||meal.includes("eggs")||meal.includes("pancake"))return "🍳";
+if(meal.includes("rice")||meal.includes("stir fry")||meal.includes("teriyaki"))return "🍚";
+if(meal.includes("sandwich")||meal.includes("sub"))return "🥪";
+if(meal.includes("hot dog"))return "🌭";
+if(meal.includes("bbq")||meal.includes("ribs"))return "🍖";
+if(meal.includes("shrimp"))return "🍤";
+if(meal.includes("potato"))return "🥔";
+
+if(meal.trim()==="")return "🍽️";
+return randomFoodEmoji();
+}
 
 const planner=document.getElementById("planner");
 
 days.forEach(item=>{
 planner.innerHTML+=`
 <div class="card" style="--dayColor:${item.color}">
-<div class="day">${item.emoji} ${item.day}</div>
+<div class="day"><span id="${item.day}-emoji">${item.emoji}</span> ${item.day}</div>
 <label>Dinner</label>
-<input id="${item.day}-dinner" placeholder="Dinner">
+<input id="${item.day}-dinner" placeholder="Dinner" oninput="updateEmoji('${item.day}')">
 <label>Notes</label>
 <textarea id="${item.day}-notes" rows="2" placeholder="Recipe link, sides, prep notes..."></textarea>
 </div>`;
@@ -70,6 +113,11 @@ planner.innerHTML+=`
 
 let costco=JSON.parse(localStorage.getItem("costco")||"[]");
 let maceys=JSON.parse(localStorage.getItem("maceys")||"[]");
+
+function updateEmoji(day){
+let meal=document.getElementById(`${day}-dinner`).value;
+document.getElementById(`${day}-emoji`).textContent=getMealEmoji(meal);
+}
 
 function saveData(){
 days.forEach(item=>{
@@ -90,6 +138,7 @@ days.forEach(item=>{
 let id=`${item.day}-${type}`;
 document.getElementById(id).value=localStorage.getItem(id)||"";
 });
+updateEmoji(item.day);
 });
 document.getElementById("notes").value=localStorage.getItem("notes")||"";
 renderGroceries();
