@@ -6,13 +6,14 @@
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f6f6;margin:0;padding:18px;max-width:800px;margin:auto}
 h1{text-align:center;font-size:38px}
-.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 12px #0001}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 12px #0001;border-left:10px solid var(--dayColor)}
 .day{font-size:26px;font-weight:800;margin-bottom:10px}
 label{font-weight:700;font-size:14px}
 input,textarea{width:100%;box-sizing:border-box;padding:12px;margin:6px 0 12px;border:1px solid #ddd;border-radius:10px;font-size:16px}
 button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color:white;font-size:17px;font-weight:700;margin:8px 0}
 .clear{background:#777}
 .grocery-item{display:flex;gap:10px;align-items:center;background:white;padding:10px;border-radius:10px;margin:6px 0}
+.small-btn{width:auto;padding:8px 10px;margin:0}
 </style>
 </head>
 <body>
@@ -21,14 +22,21 @@ button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color
 
 <div id="planner"></div>
 
-<div class="card">
-<h2>🛒 Grocery List</h2>
-<input id="newItem" placeholder="Add grocery item">
-<button onclick="addGrocery()">Add Item</button>
-<div id="groceryList"></div>
+<div class="card" style="--dayColor:#ddd">
+<h2>🛒 Costco List</h2>
+<input id="costcoItem" placeholder="Add Costco item">
+<button onclick="addGrocery('costco')">Add Costco Item</button>
+<div id="costcoList"></div>
 </div>
 
-<div class="card">
+<div class="card" style="--dayColor:#ddd">
+<h2>🛒 Macey's List</h2>
+<input id="maceysItem" placeholder="Add Macey's item">
+<button onclick="addGrocery('maceys')">Add Macey's Item</button>
+<div id="maceysList"></div>
+</div>
+
+<div class="card" style="--dayColor:#ddd">
 <h2>📝 Meal Prep Notes</h2>
 <textarea id="notes" rows="5" placeholder="Prep chicken, thaw meat, chop veggies..."></textarea>
 </div>
@@ -37,38 +45,49 @@ button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color
 <button class="clear" onclick="clearAll()">Clear Week</button>
 
 <script>
-const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const days=[
+{day:"Monday",emoji:"🌮",color:"#ffd6a5"},
+{day:"Tuesday",emoji:"🍝",color:"#fdffb6"},
+{day:"Wednesday",emoji:"🥗",color:"#caffbf"},
+{day:"Thursday",emoji:"🍔",color:"#9bf6ff"},
+{day:"Friday",emoji:"🍕",color:"#a0c4ff"},
+{day:"Saturday",emoji:"🥩",color:"#bdb2ff"},
+{day:"Sunday",emoji:"🍲",color:"#ffc6ff"}
+];
+
 const planner=document.getElementById("planner");
 
-days.forEach(day=>{
+days.forEach(item=>{
 planner.innerHTML+=`
-<div class="card">
-<div class="day">${day}</div>
-<label>Breakfast</label><input id="${day}-breakfast">
-<label>Lunch</label><input id="${day}-lunch">
-<label>Dinner</label><input id="${day}-dinner">
-<label>Notes</label><textarea id="${day}-notes" rows="2"></textarea>
+<div class="card" style="--dayColor:${item.color}">
+<div class="day">${item.emoji} ${item.day}</div>
+<label>Dinner</label>
+<input id="${item.day}-dinner" placeholder="Dinner">
+<label>Notes</label>
+<textarea id="${item.day}-notes" rows="2" placeholder="Recipe link, sides, prep notes..."></textarea>
 </div>`;
 });
 
-let groceries=JSON.parse(localStorage.getItem("groceries")||"[]");
+let costco=JSON.parse(localStorage.getItem("costco")||"[]");
+let maceys=JSON.parse(localStorage.getItem("maceys")||"[]");
 
 function saveData(){
-days.forEach(day=>{
-["breakfast","lunch","dinner","notes"].forEach(type=>{
-let id=`${day}-${type}`;
+days.forEach(item=>{
+["dinner","notes"].forEach(type=>{
+let id=`${item.day}-${type}`;
 localStorage.setItem(id,document.getElementById(id).value);
 });
 });
 localStorage.setItem("notes",document.getElementById("notes").value);
-localStorage.setItem("groceries",JSON.stringify(groceries));
+localStorage.setItem("costco",JSON.stringify(costco));
+localStorage.setItem("maceys",JSON.stringify(maceys));
 alert("Saved!");
 }
 
 function loadData(){
-days.forEach(day=>{
-["breakfast","lunch","dinner","notes"].forEach(type=>{
-let id=`${day}-${type}`;
+days.forEach(item=>{
+["dinner","notes"].forEach(type=>{
+let id=`${item.day}-${type}`;
 document.getElementById(id).value=localStorage.getItem(id)||"";
 });
 });
@@ -76,44 +95,63 @@ document.getElementById("notes").value=localStorage.getItem("notes")||"";
 renderGroceries();
 }
 
-function addGrocery(){
-let item=document.getElementById("newItem").value.trim();
+function addGrocery(store){
+let inputId=store==="costco" ? "costcoItem" : "maceysItem";
+let item=document.getElementById(inputId).value.trim();
 if(!item)return;
-groceries.push({text:item,done:false});
-document.getElementById("newItem").value="";
+
+if(store==="costco"){
+costco.push({text:item,done:false});
+} else {
+maceys.push({text:item,done:false});
+}
+
+document.getElementById(inputId).value="";
 saveData();
 renderGroceries();
 }
 
-function toggleGrocery(i){
-groceries[i].done=!groceries[i].done;
+function toggleGrocery(store,i){
+let list=store==="costco" ? costco : maceys;
+list[i].done=!list[i].done;
 saveData();
 renderGroceries();
 }
 
-function deleteGrocery(i){
-groceries.splice(i,1);
+function deleteGrocery(store,i){
+let list=store==="costco" ? costco : maceys;
+list.splice(i,1);
 saveData();
 renderGroceries();
+}
+
+function renderList(store){
+let list=store==="costco" ? costco : maceys;
+let elementId=store==="costco" ? "costcoList" : "maceysList";
+let html="";
+
+list.forEach((g,i)=>{
+html+=`
+<div class="grocery-item">
+<input type="checkbox" style="width:auto" ${g.done?"checked":""} onchange="toggleGrocery('${store}',${i})">
+<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${g.text}</span>
+<button class="small-btn" onclick="deleteGrocery('${store}',${i})">x</button>
+</div>`;
+});
+
+document.getElementById(elementId).innerHTML=html;
 }
 
 function renderGroceries(){
-let list=document.getElementById("groceryList");
-list.innerHTML="";
-groceries.forEach((g,i)=>{
-list.innerHTML+=`
-<div class="grocery-item">
-<input type="checkbox" style="width:auto" ${g.done?"checked":""} onchange="toggleGrocery(${i})">
-<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${g.text}</span>
-<button style="width:auto;padding:8px 10px" onclick="deleteGrocery(${i})">x</button>
-</div>`;
-});
+renderList("costco");
+renderList("maceys");
 }
 
 function clearAll(){
-if(!confirm("Clear the whole week?"))return;
+if(!confirm("Clear the whole week and both grocery lists?"))return;
 localStorage.clear();
-groceries=[];
+costco=[];
+maceys=[];
 loadData();
 }
 
