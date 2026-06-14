@@ -161,7 +161,28 @@ planner.innerHTML+=`
 
 function chooseFavorite(day){
 if(favorites.length===0){alert("Add favorite meals first.");showScreen("favorites");return;}
-let menu="Choose a favorite meal:\\n\\n";
+ function chooseFavorite(day){
+if(favorites.length===0){alert("Add favorite meals first.");showScreen("favorites");return;}
+
+let menu="Choose a favorite meal:\n\n";
+favorites.forEach((f,i)=>menu+=`${i+1}. ${f.name}\n`);
+
+let choice=prompt(menu);
+let index=parseInt(choice)-1;
+if(isNaN(index)||!favorites[index])return;
+
+let fav=favorites[index];
+document.getElementById(`${day}-dinner`).value=fav.name;
+document.getElementById(`${day}-notes`).value=fav.notes||"";
+updateEmoji(day);
+
+if(confirm("Add this meal's grocery items to Costco and Macey's lists?")){
+(fav.costco||[]).forEach(item=>costco.push({text:item,done:false}));
+(fav.maceys||[]).forEach(item=>maceys.push({text:item,done:false}));
+}
+
+saveData();
+}
 favorites.forEach((f,i)=>menu+=`${i+1}. ${f.name}\\n`);
 let choice=prompt(menu);
 let index=parseInt(choice)-1;
