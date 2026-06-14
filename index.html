@@ -29,6 +29,9 @@ button{width:100%;padding:14px;border:0;border-radius:16px;background:#111;color
 .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-radius:26px 26px 0 0;padding:18px;max-height:78vh;overflow:auto;z-index:101;box-shadow:0 -10px 30px rgba(0,0,0,.2)}
 .sheet-close{background:#777}.pill{display:inline-block;background:#eee1d4;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;margin-top:5px}
 .status{text-align:center;font-size:13px;color:#777;margin-top:-8px;margin-bottom:8px}
+.check-row{display:flex;align-items:center;gap:10px;background:white;border-radius:14px;padding:12px;margin:8px 0}
+.check-row input{width:auto;margin:0}
+.section-title{font-weight:900;font-size:18px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -96,6 +99,18 @@ button{width:100%;padding:14px;border:0;border-radius:16px;background:#111;color
 </div>
 </div>
 
+<div id="grocerySheetBackdrop" class="sheet-backdrop" onclick="closeGroceryPicker()">
+<div class="sheet" onclick="event.stopPropagation()">
+<h2 id="groceryPickerTitle">Add groceries?</h2>
+<p class="mini">Choose which items you want added to the lists.</p>
+<button onclick="selectAllGroceryChecks()">Select All</button>
+<button class="clear" onclick="clearAllGroceryChecks()">Clear All</button>
+<div id="groceryPickerList"></div>
+<button onclick="addSelectedGroceries()">Add Selected</button>
+<button class="sheet-close" onclick="closeGroceryPicker()">Cancel</button>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -124,14 +139,11 @@ const baseDays=[
 ];
 
 const todayIndex=new Date().getDay();
-
-const days=[
-...baseDays.slice(todayIndex),
-...baseDays.slice(0,todayIndex)
-];
+const days=[...baseDays.slice(todayIndex),...baseDays.slice(0,todayIndex)];
 
 let state={plan:{},costco:[],maceys:[],favorites:[],notes:""};
 let selectedDay=null;
+let selectedFavoriteForGroceries=null;
 let loading=true;
 let saveTimer=null;
 
@@ -294,16 +306,84 @@ function toggleCategory(id){document.getElementById(id).classList.toggle("open")
 function selectFavorite(index){
 let fav=state.favorites[index];
 if(!fav||!selectedDay)return;
+
 document.getElementById(selectedDay+"-dinner").value=fav.name;
 document.getElementById(selectedDay+"-notes").value=fav.notes||"";
 updateEmoji(selectedDay);
 closeMealPicker();
-if(confirm("Add this meal's grocery items to Costco and Macey's lists?")){
-(fav.costco||[]).forEach(item=>state.costco.push({text:item,done:false}));
-(fav.maceys||[]).forEach(item=>state.maceys.push({text:item,done:false}));
+
+selectedFavoriteForGroceries=fav;
+
+let hasGroceries=(fav.costco&&fav.costco.length)||(fav.maceys&&fav.maceys.length);
+if(hasGroceries){
+openGroceryPicker(fav);
+} else {
+saveData();
 }
+}
+
+function openGroceryPicker(fav){
+document.getElementById("groceryPickerTitle").textContent=getMealEmoji(fav.name)+" "+fav.name+" Groceries";
+let box=document.getElementById("groceryPickerList");
+let html="";
+
+if((fav.costco||[]).length){
+html+=`<div class="section-title">🛒 Costco</div>`;
+fav.costco.forEach((item,i)=>{
+html+=`<label class="check-row">
+<input type="checkbox" class="grocery-check" data-store="costco" data-item="${escapeHtml(item)}" checked>
+<span>${escapeHtml(item)}</span>
+</label>`;
+});
+}
+
+if((fav.maceys||[]).length){
+html+=`<div class="section-title">🛒 Macey's</div>`;
+fav.maceys.forEach((item,i)=>{
+html+=`<label class="check-row">
+<input type="checkbox" class="grocery-check" data-store="maceys" data-item="${escapeHtml(item)}" checked>
+<span>${escapeHtml(item)}</span>
+</label>`;
+});
+}
+
+box.innerHTML=html;
+document.getElementById("grocerySheetBackdrop").style.display="block";
+}
+
+function closeGroceryPicker(){
+document.getElementById("grocerySheetBackdrop").style.display="none";
+selectedFavoriteForGroceries=null;
+saveData();
+}
+
+function selectAllGroceryChecks(){
+document.querySelectorAll(".grocery-check").forEach(cb=>cb.checked=true);
+}
+
+function clearAllGroceryChecks(){
+document.querySelectorAll(".grocery-check").forEach(cb=>cb.checked=false);
+}
+
+function addSelectedGroceries(){
+document.querySelectorAll(".grocery-check:checked").forEach(cb=>{
+let store=cb.dataset.store;
+let item=cb.dataset.item;
+state[store].push({text:item,done:false});
+});
+document.getElementById("grocerySheetBackdrop").style.display="none";
+selectedFavoriteForGroceries=null;
 saveData();
 renderGroceries();
+}
+
+function escapeHtml(text){
+return String(text)
+.replaceAll("&","&amp;")
+.replaceAll("<","&lt;")
+.replaceAll(">","&gt;")
+.replaceAll('"',"&quot;")
+.replaceAll("'","&#039;");
 }
 
 function updateEmoji(day){
@@ -345,16 +425,16 @@ groups[cat].forEach(f=>{
 body+=`<div class="fav-item">
 <span style="font-size:26px">${getMealEmoji(f.name)}</span>
 <div style="flex:1">
-<strong>${f.name}</strong>
-<div class="mini">${f.notes||""}</div>
-<div class="mini">Costco: ${(f.costco||[]).join(", ")||"none"}</div>
-<div class="mini">Macey's: ${(f.maceys||[]).join(", ")||"none"}</div>
+<strong>${escapeHtml(f.name)}</strong>
+<div class="mini">${escapeHtml(f.notes||"")}</div>
+<div class="mini">Costco: ${(f.costco||[]).map(escapeHtml).join(", ")||"none"}</div>
+<div class="mini">Macey's: ${(f.maceys||[]).map(escapeHtml).join(", ")||"none"}</div>
 </div>
 <button type="button" class="small-btn delete" onclick="deleteFavorite(${f.index})">x</button>
 </div>`;
 });
 box.innerHTML+=`<div class="category open" id="${id}">
-<div class="category-header" onclick="toggleCategory('${id}')"><span>${cat}</span><span>⌄</span></div>
+<div class="category-header" onclick="toggleCategory('${id}')"><span>${escapeHtml(cat)}</span><span>⌄</span></div>
 <div class="category-body">${body}</div>
 </div>`;
 });
@@ -386,7 +466,7 @@ let html="";
 list.forEach((g,i)=>{
 html+=`<div class="grocery-item">
 <input type="checkbox" style="width:auto" ${g.done?"checked":""} onchange="toggleGrocery('${store}',${i})">
-<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${g.text}</span>
+<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${escapeHtml(g.text)}</span>
 <button type="button" class="small-btn" onclick="deleteGrocery('${store}',${i})">x</button>
 </div>`;
 });
@@ -427,6 +507,10 @@ window.saveData=saveData;
 window.clearWeek=clearWeek;
 window.clearGroceries=clearGroceries;
 window.queueSave=queueSave;
+window.closeGroceryPicker=closeGroceryPicker;
+window.selectAllGroceryChecks=selectAllGroceryChecks;
+window.clearAllGroceryChecks=clearAllGroceryChecks;
+window.addSelectedGroceries=addSelectedGroceries;
 </script>
 
 </body>
