@@ -4,70 +4,104 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Meal Planner</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f6f6;margin:0;padding:18px;max-width:800px;margin:auto}
-h1{text-align:center;font-size:38px}
-.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 12px #0001;border-left:10px solid var(--dayColor)}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f6f6;margin:0;padding:18px;max-width:850px;margin:auto}
+h1{text-align:center;font-size:36px}
+.nav{display:flex;gap:8px;position:sticky;top:0;background:#f6f6f6;padding:10px 0;z-index:5}
+.nav button{flex:1;background:#ddd;color:#111}
+.nav button.active{background:#111;color:white}
+.screen{display:none}
+.screen.active{display:block}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 12px #0001;border-left:10px solid var(--dayColor,#ddd)}
 .day{font-size:26px;font-weight:800;margin-bottom:10px}
 label{font-weight:700;font-size:14px}
-input,textarea{width:100%;box-sizing:border-box;padding:12px;margin:6px 0 12px;border:1px solid #ddd;border-radius:10px;font-size:16px}
-button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color:white;font-size:17px;font-weight:700;margin:8px 0}
+input,textarea,select{width:100%;box-sizing:border-box;padding:12px;margin:6px 0 12px;border:1px solid #ddd;border-radius:10px;font-size:16px}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:#111;color:white;font-size:16px;font-weight:700;margin:6px 0}
 .clear{background:#777}
-.grocery-item{display:flex;gap:10px;align-items:center;background:white;padding:10px;border-radius:10px;margin:6px 0}
+.delete{background:#b00020}
 .small-btn{width:auto;padding:8px 10px;margin:0}
+.row{display:flex;gap:8px;align-items:center}
+.row input{margin:0}
+.grocery-item,.fav-item{display:flex;gap:10px;align-items:center;background:white;padding:10px;border-radius:10px;margin:6px 0}
+.mini{font-size:13px;color:#666}
 </style>
 </head>
 <body>
 
 <h1>🍽️ Meal Planner</h1>
 
-<div id="planner"></div>
+<div class="nav">
+<button id="planBtn" class="active" onclick="showScreen('plan')">Plan</button>
+<button id="favBtn" onclick="showScreen('favorites')">Favorites</button>
+<button id="groceryBtn" onclick="showScreen('grocery')">Groceries</button>
+</div>
 
-<div class="card" style="--dayColor:#ddd">
+<div id="plan" class="screen active">
+<div id="planner"></div>
+<button onclick="saveData()">Save Everything</button>
+<button class="clear" onclick="clearWeek()">Clear Week</button>
+</div>
+
+<div id="favorites" class="screen">
+<div class="card">
+<h2>⭐ Add Favorite Meal</h2>
+<label>Meal Name</label>
+<input id="favName" placeholder="Chicken tacos">
+<label>Notes / Recipe Link</label>
+<textarea id="favNotes" rows="3" placeholder="Recipe link, sides, prep notes..."></textarea>
+<label>Costco Items</label>
+<textarea id="favCostco" rows="3" placeholder="Chicken&#10;Tortillas"></textarea>
+<label>Macey's Items</label>
+<textarea id="favMaceys" rows="3" placeholder="Lettuce&#10;Salsa&#10;Cilantro"></textarea>
+<button onclick="addFavorite()">Save Favorite Meal</button>
+</div>
+
+<div class="card">
+<h2>Saved Favorite Meals</h2>
+<div id="favoritesList"></div>
+</div>
+</div>
+
+<div id="grocery" class="screen">
+<div class="card">
 <h2>🛒 Costco List</h2>
 <input id="costcoItem" placeholder="Add Costco item">
 <button onclick="addGrocery('costco')">Add Costco Item</button>
 <div id="costcoList"></div>
 </div>
 
-<div class="card" style="--dayColor:#ddd">
+<div class="card">
 <h2>🛒 Macey's List</h2>
 <input id="maceysItem" placeholder="Add Macey's item">
 <button onclick="addGrocery('maceys')">Add Macey's Item</button>
 <div id="maceysList"></div>
 </div>
 
-<div class="card" style="--dayColor:#ddd">
+<div class="card">
 <h2>📝 Meal Prep Notes</h2>
 <textarea id="notes" rows="5" placeholder="Prep chicken, thaw meat, chop veggies..."></textarea>
 </div>
 
 <button onclick="saveData()">Save Everything</button>
-<button class="clear" onclick="clearAll()">Clear Week</button>
+<button class="clear" onclick="clearGroceries()">Clear Grocery Lists</button>
+</div>
 
 <script>
 const days=[
-{day:"Monday",emoji:"🍽️",color:"#ffd6a5"},
-{day:"Tuesday",emoji:"🍽️",color:"#fdffb6"},
-{day:"Wednesday",emoji:"🍽️",color:"#caffbf"},
-{day:"Thursday",emoji:"🍽️",color:"#9bf6ff"},
-{day:"Friday",emoji:"🍽️",color:"#a0c4ff"},
-{day:"Saturday",emoji:"🍽️",color:"#bdb2ff"},
-{day:"Sunday",emoji:"🍽️",color:"#ffc6ff"}
+{day:"Monday",color:"#ffd6a5"},
+{day:"Tuesday",color:"#fdffb6"},
+{day:"Wednesday",color:"#caffbf"},
+{day:"Thursday",color:"#9bf6ff"},
+{day:"Friday",color:"#a0c4ff"},
+{day:"Saturday",color:"#bdb2ff"},
+{day:"Sunday",color:"#ffc6ff"}
 ];
 
-const randomFoodEmojis=[
-"🍽️","🥘","🍲","🍛","🍜","🍝","🥗","🌮","🌯","🍕",
-"🍔","🍟","🥪","🥙","🍗","🥩","🍖","🍤","🍣","🍱",
-"🥟","🍚","🍙","🍞","🥐","🥖","🧀","🥔","🥕","🥦"
-];
+const randomFoodEmojis=["🍽️","🥘","🍲","🍛","🍜","🍝","🥗","🌮","🌯","🍕","🍔","🍟","🥪","🥙","🍗","🥩","🍖","🍤","🍣","🍱","🥟","🍚","🍙","🥐","🧀","🥔","🥕","🥦"];
 
-function randomFoodEmoji(){
-return randomFoodEmojis[Math.floor(Math.random()*randomFoodEmojis.length)];
-}
+function randomFoodEmoji(){return randomFoodEmojis[Math.floor(Math.random()*randomFoodEmojis.length)];}
 
 function getMealEmoji(meal){
 meal=meal.toLowerCase();
-
 if(meal.includes("leftover"))return "🥡";
 if(meal.includes("takeout")||meal.includes("take out"))return "🥢";
 if(meal.includes("date night"))return "🥂";
@@ -75,7 +109,6 @@ if(meal.includes("costco pizza"))return "🍕";
 if(meal.includes("crockpot")||meal.includes("crock pot")||meal.includes("slow cooker"))return "🥘";
 if(meal.includes("smoker")||meal.includes("smoked"))return "🔥";
 if(meal.includes("grill")||meal.includes("grilled"))return "♨️";
-
 if(meal.includes("taco")||meal.includes("burrito")||meal.includes("quesadilla")||meal.includes("mexican")||meal.includes("cafe rio"))return "🌮";
 if(meal.includes("pasta")||meal.includes("spaghetti")||meal.includes("alfredo")||meal.includes("lasagna")||meal.includes("ravioli"))return "🍝";
 if(meal.includes("pizza"))return "🍕";
@@ -93,9 +126,21 @@ if(meal.includes("hot dog"))return "🌭";
 if(meal.includes("bbq")||meal.includes("ribs"))return "🍖";
 if(meal.includes("shrimp"))return "🍤";
 if(meal.includes("potato"))return "🥔";
-
 if(meal.trim()==="")return "🍽️";
 return randomFoodEmoji();
+}
+
+let costco=JSON.parse(localStorage.getItem("costco")||"[]");
+let maceys=JSON.parse(localStorage.getItem("maceys")||"[]");
+let favorites=JSON.parse(localStorage.getItem("favorites")||"[]");
+
+function showScreen(screen){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(screen).classList.add("active");
+document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+document.getElementById(screen==="plan"?"planBtn":screen==="favorites"?"favBtn":"groceryBtn").classList.add("active");
+renderFavorites();
+renderGroceries();
 }
 
 const planner=document.getElementById("planner");
@@ -103,58 +148,95 @@ const planner=document.getElementById("planner");
 days.forEach(item=>{
 planner.innerHTML+=`
 <div class="card" style="--dayColor:${item.color}">
-<div class="day"><span id="${item.day}-emoji">${item.emoji}</span> ${item.day}</div>
+<div class="day"><span id="${item.day}-emoji">🍽️</span> ${item.day}</div>
 <label>Dinner</label>
-<input id="${item.day}-dinner" placeholder="Dinner" oninput="updateEmoji('${item.day}')">
+<div class="row">
+<input id="${item.day}-dinner" placeholder="Type dinner manually" oninput="updateEmoji('${item.day}')">
+<button class="small-btn" onclick="chooseFavorite('${item.day}')">+</button>
+</div>
 <label>Notes</label>
 <textarea id="${item.day}-notes" rows="2" placeholder="Recipe link, sides, prep notes..."></textarea>
 </div>`;
 });
 
-let costco=JSON.parse(localStorage.getItem("costco")||"[]");
-let maceys=JSON.parse(localStorage.getItem("maceys")||"[]");
+function chooseFavorite(day){
+if(favorites.length===0){alert("Add favorite meals first.");showScreen("favorites");return;}
+let menu="Choose a favorite meal:\\n\\n";
+favorites.forEach((f,i)=>menu+=`${i+1}. ${f.name}\\n`);
+let choice=prompt(menu);
+let index=parseInt(choice)-1;
+if(isNaN(index)||!favorites[index])return;
+let fav=favorites[index];
+
+document.getElementById(`${day}-dinner`).value=fav.name;
+document.getElementById(`${day}-notes`).value=fav.notes||"";
+updateEmoji(day);
+
+if(confirm("Add this meal's grocery items to Costco and Macey's lists?")){
+(fav.costco||[]).forEach(item=>costco.push({text:item,done:false}));
+(fav.maceys||[]).forEach(item=>maceys.push({text:item,done:false}));
+}
+saveData();
+}
 
 function updateEmoji(day){
 let meal=document.getElementById(`${day}-dinner`).value;
 document.getElementById(`${day}-emoji`).textContent=getMealEmoji(meal);
 }
 
-function saveData(){
-days.forEach(item=>{
-["dinner","notes"].forEach(type=>{
-let id=`${item.day}-${type}`;
-localStorage.setItem(id,document.getElementById(id).value);
-});
-});
-localStorage.setItem("notes",document.getElementById("notes").value);
-localStorage.setItem("costco",JSON.stringify(costco));
-localStorage.setItem("maceys",JSON.stringify(maceys));
-alert("Saved!");
+function addFavorite(){
+let name=document.getElementById("favName").value.trim();
+if(!name)return alert("Add a meal name.");
+
+let notes=document.getElementById("favNotes").value.trim();
+let c=document.getElementById("favCostco").value.split("\\n").map(x=>x.trim()).filter(Boolean);
+let m=document.getElementById("favMaceys").value.split("\\n").map(x=>x.trim()).filter(Boolean);
+
+favorites.push({name,notes,costco:c,maceys:m});
+localStorage.setItem("favorites",JSON.stringify(favorites));
+
+document.getElementById("favName").value="";
+document.getElementById("favNotes").value="";
+document.getElementById("favCostco").value="";
+document.getElementById("favMaceys").value="";
+
+renderFavorites();
+alert("Favorite saved!");
 }
 
-function loadData(){
-days.forEach(item=>{
-["dinner","notes"].forEach(type=>{
-let id=`${item.day}-${type}`;
-document.getElementById(id).value=localStorage.getItem(id)||"";
+function deleteFavorite(i){
+if(!confirm("Delete this favorite meal?"))return;
+favorites.splice(i,1);
+localStorage.setItem("favorites",JSON.stringify(favorites));
+renderFavorites();
+}
+
+function renderFavorites(){
+let box=document.getElementById("favoritesList");
+if(!box)return;
+if(favorites.length===0){box.innerHTML="<p class='mini'>No favorites saved yet.</p>";return;}
+box.innerHTML="";
+favorites.forEach((f,i)=>{
+box.innerHTML+=`
+<div class="fav-item">
+<span style="font-size:24px">${getMealEmoji(f.name)}</span>
+<div style="flex:1">
+<strong>${f.name}</strong>
+<div class="mini">${f.notes||""}</div>
+<div class="mini">Costco: ${(f.costco||[]).join(", ")||"none"}</div>
+<div class="mini">Macey's: ${(f.maceys||[]).join(", ")||"none"}</div>
+</div>
+<button class="small-btn delete" onclick="deleteFavorite(${i})">x</button>
+</div>`;
 });
-updateEmoji(item.day);
-});
-document.getElementById("notes").value=localStorage.getItem("notes")||"";
-renderGroceries();
 }
 
 function addGrocery(store){
 let inputId=store==="costco" ? "costcoItem" : "maceysItem";
 let item=document.getElementById(inputId).value.trim();
 if(!item)return;
-
-if(store==="costco"){
-costco.push({text:item,done:false});
-} else {
-maceys.push({text:item,done:false});
-}
-
+if(store==="costco"){costco.push({text:item,done:false});}
+else{maceys.push({text:item,done:false});}
 document.getElementById(inputId).value="";
 saveData();
 renderGroceries();
@@ -178,7 +260,6 @@ function renderList(store){
 let list=store==="costco" ? costco : maceys;
 let elementId=store==="costco" ? "costcoList" : "maceysList";
 let html="";
-
 list.forEach((g,i)=>{
 html+=`
 <div class="grocery-item">
@@ -187,7 +268,6 @@ html+=`
 <button class="small-btn" onclick="deleteGrocery('${store}',${i})">x</button>
 </div>`;
 });
-
 document.getElementById(elementId).innerHTML=html;
 }
 
@@ -196,12 +276,49 @@ renderList("costco");
 renderList("maceys");
 }
 
-function clearAll(){
-if(!confirm("Clear the whole week and both grocery lists?"))return;
-localStorage.clear();
+function saveData(){
+days.forEach(item=>{
+["dinner","notes"].forEach(type=>{
+let id=`${item.day}-${type}`;
+localStorage.setItem(id,document.getElementById(id).value);
+});
+});
+localStorage.setItem("notes",document.getElementById("notes").value);
+localStorage.setItem("costco",JSON.stringify(costco));
+localStorage.setItem("maceys",JSON.stringify(maceys));
+localStorage.setItem("favorites",JSON.stringify(favorites));
+}
+
+function loadData(){
+days.forEach(item=>{
+["dinner","notes"].forEach(type=>{
+let id=`${item.day}-${type}`;
+document.getElementById(id).value=localStorage.getItem(id)||"";
+});
+updateEmoji(item.day);
+});
+document.getElementById("notes").value=localStorage.getItem("notes")||"";
+renderGroceries();
+renderFavorites();
+}
+
+function clearWeek(){
+if(!confirm("Clear this week's meal plan?"))return;
+days.forEach(item=>{
+localStorage.removeItem(`${item.day}-dinner`);
+localStorage.removeItem(`${item.day}-notes`);
+document.getElementById(`${item.day}-dinner`).value="";
+document.getElementById(`${item.day}-notes`).value="";
+updateEmoji(item.day);
+});
+}
+
+function clearGroceries(){
+if(!confirm("Clear Costco and Macey's lists?"))return;
 costco=[];
 maceys=[];
-loadData();
+saveData();
+renderGroceries();
 }
 
 loadData();
