@@ -16,10 +16,10 @@ h1{text-align:center;font-size:38px;margin:28px 0 18px}
 label{font-weight:800;font-size:14px}
 input,textarea,select{width:100%;box-sizing:border-box;padding:14px;margin:7px 0 13px;border:1px solid #ddd;border-radius:14px;font-size:16px;background:white}
 button{width:100%;padding:14px;border:0;border-radius:16px;background:#111;color:white;font-size:16px;font-weight:800;margin:7px 0}
-.clear{background:#777}.delete{background:#b00020}
+.clear{background:#777}.delete{background:#b00020}.edit{background:#5d5148}
 .row{display:flex;gap:8px;align-items:center}.row input{margin:0;flex:1}
 .plus{width:54px;height:54px;font-size:28px;border-radius:18px;padding:0}
-.grocery-item,.fav-item{display:flex;gap:10px;align-items:center;background:white;padding:12px;border-radius:14px;margin:8px 0}
+.grocery-item,.fav-item{display:flex;gap:10px;align-items:center;background:white;padding:12px;border-radius:14px;margin:8px 0;border-left:8px solid var(--itemColor,#ddd)}
 .mini{font-size:13px;color:var(--muted)}.small-btn{width:auto;padding:8px 10px;margin:0}
 .category{background:white;border-radius:16px;margin:10px 0;overflow:hidden;border:1px solid #eadfd2}
 .category-header{padding:14px;font-weight:900;font-size:18px;display:flex;justify-content:space-between;align-items:center;background:#f3e9dd}
@@ -53,7 +53,7 @@ button{width:100%;padding:14px;border:0;border-radius:16px;background:#111;color
 
 <div id="favorites" class="screen">
 <div class="card">
-<h2>⭐ Add Favorite Meal</h2>
+<h2 id="favoriteFormTitle">⭐ Add Favorite Meal</h2>
 <label>Meal Name</label><input id="favName" placeholder="Chicken tacos">
 <label>Category</label>
 <select id="favCategory">
@@ -64,7 +64,8 @@ button{width:100%;padding:14px;border:0;border-radius:16px;background:#111;color
 <label>Notes / Recipe Link</label><textarea id="favNotes" rows="3"></textarea>
 <label>Costco Items</label><textarea id="favCostco" rows="3" placeholder="Chicken&#10;Tortillas"></textarea>
 <label>Macey's Items</label><textarea id="favMaceys" rows="3" placeholder="Lettuce&#10;Salsa&#10;Cilantro"></textarea>
-<button onclick="addFavorite()">Save Favorite Meal</button>
+<button id="favoriteSaveButton" onclick="addOrUpdateFavorite()">Save Favorite Meal</button>
+<button id="favoriteCancelButton" class="clear" style="display:none" onclick="cancelFavoriteEdit()">Cancel Edit</button>
 </div>
 <div class="card"><h2>Saved Favorite Meals</h2><div id="favoritesList"></div></div>
 </div>
@@ -144,12 +145,18 @@ const days=[...baseDays.slice(todayIndex),...baseDays.slice(0,todayIndex)];
 let state={plan:{},costco:[],maceys:[],favorites:[],notes:""};
 let selectedDay=null;
 let selectedFavoriteForGroceries=null;
+let editingFavoriteIndex=null;
 let loading=true;
 let saveTimer=null;
 
 const randomFoodEmojis=["🍽️","🥘","🍲","🍛","🍜","🍝","🥗","🌮","🌯","🍕","🍔","🍟","🥪","🥙","🍗","🥩","🍖","🍤","🍣","🍱","🥟","🍚","🍙","🥐","🧀","🥔","🥕","🥦"];
 
 function randomFoodEmoji(){return randomFoodEmojis[Math.floor(Math.random()*randomFoodEmojis.length)];}
+
+function getDayColor(day){
+let found=baseDays.find(d=>d.day===day);
+return found ? found.color : "#ddd";
+}
 
 function getMealEmoji(meal){
 meal=(meal||"").toLowerCase();
@@ -278,7 +285,7 @@ groups[cat].push({...f,index:i});
 return groups;
 }
 
-function safeId(s){return s.replaceAll(" ","-").replaceAll("/","-").replaceAll("&","and");}
+function safeId(s){return String(s).replaceAll(" ","-").replaceAll("/","-").replaceAll("&","and");}
 
 function renderMealPicker(){
 let box=document.getElementById("mealPickerList");
@@ -289,13 +296,13 @@ let id="picker-"+safeId(cat);
 let body="";
 groups[cat].forEach(f=>{
 body+=`<div class="meal-option" onclick="selectFavorite(${f.index})">
-${getMealEmoji(f.name)} ${f.name}
-<div class="mini">${f.notes||""}</div>
-<span class="pill">${cat}</span>
+${getMealEmoji(f.name)} ${escapeHtml(f.name)}
+<div class="mini">${escapeHtml(f.notes||"")}</div>
+<span class="pill">${escapeHtml(cat)}</span>
 </div>`;
 });
 box.innerHTML+=`<div class="category open" id="${id}">
-<div class="category-header" onclick="toggleCategory('${id}')"><span>${cat}</span><span>⌄</span></div>
+<div class="category-header" onclick="toggleCategory('${id}')"><span>${escapeHtml(cat)}</span><span>⌄</span></div>
 <div class="category-body">${body}</div>
 </div>`;
 });
@@ -329,7 +336,7 @@ let html="";
 
 if((fav.costco||[]).length){
 html+=`<div class="section-title">🛒 Costco</div>`;
-fav.costco.forEach((item,i)=>{
+fav.costco.forEach(item=>{
 html+=`<label class="check-row">
 <input type="checkbox" class="grocery-check" data-store="costco" data-item="${escapeHtml(item)}" checked>
 <span>${escapeHtml(item)}</span>
@@ -339,7 +346,7 @@ html+=`<label class="check-row">
 
 if((fav.maceys||[]).length){
 html+=`<div class="section-title">🛒 Macey's</div>`;
-fav.maceys.forEach((item,i)=>{
+fav.maceys.forEach(item=>{
 html+=`<label class="check-row">
 <input type="checkbox" class="grocery-check" data-store="maceys" data-item="${escapeHtml(item)}" checked>
 <span>${escapeHtml(item)}</span>
@@ -366,11 +373,16 @@ document.querySelectorAll(".grocery-check").forEach(cb=>cb.checked=false);
 }
 
 function addSelectedGroceries(){
+let color=getDayColor(selectedDay);
+let day=selectedDay;
+let meal=document.getElementById(selectedDay+"-dinner").value;
+
 document.querySelectorAll(".grocery-check:checked").forEach(cb=>{
 let store=cb.dataset.store;
 let item=cb.dataset.item;
-state[store].push({text:item,done:false});
+state[store].push({text:item,done:false,day:day,meal:meal,color:color});
 });
+
 document.getElementById("grocerySheetBackdrop").style.display="none";
 selectedFavoriteForGroceries=null;
 saveData();
@@ -391,24 +403,69 @@ let meal=document.getElementById(day+"-dinner").value;
 document.getElementById(day+"-emoji").textContent=getMealEmoji(meal);
 }
 
-function addFavorite(){
+function addOrUpdateFavorite(){
 let name=document.getElementById("favName").value.trim();
 if(!name){alert("Add a meal name.");return;}
+
 let category=document.getElementById("favCategory").value;
 let notes=document.getElementById("favNotes").value.trim();
 let c=document.getElementById("favCostco").value.split("\n").map(x=>x.trim()).filter(Boolean);
 let m=document.getElementById("favMaceys").value.split("\n").map(x=>x.trim()).filter(Boolean);
-state.favorites.push({name,category,notes,costco:c,maceys:m});
+
+let favorite={name,category,notes,costco:c,maceys:m};
+
+if(editingFavoriteIndex!==null){
+state.favorites[editingFavoriteIndex]=favorite;
+alert("Favorite updated!");
+} else {
+state.favorites.push(favorite);
+alert("Favorite saved!");
+}
+
+resetFavoriteForm();
+saveData();
+renderFavorites();
+}
+
+function editFavorite(i){
+let f=state.favorites[i];
+if(!f)return;
+
+editingFavoriteIndex=i;
+document.getElementById("favoriteFormTitle").textContent="✏️ Edit Favorite Meal";
+document.getElementById("favoriteSaveButton").textContent="Update Favorite Meal";
+document.getElementById("favoriteCancelButton").style.display="block";
+
+document.getElementById("favName").value=f.name||"";
+document.getElementById("favCategory").value=f.category||"Other";
+document.getElementById("favNotes").value=f.notes||"";
+document.getElementById("favCostco").value=(f.costco||[]).join("\n");
+document.getElementById("favMaceys").value=(f.maceys||[]).join("\n");
+
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function resetFavoriteForm(){
+editingFavoriteIndex=null;
+document.getElementById("favoriteFormTitle").textContent="⭐ Add Favorite Meal";
+document.getElementById("favoriteSaveButton").textContent="Save Favorite Meal";
+document.getElementById("favoriteCancelButton").style.display="none";
+
 document.getElementById("favName").value="";
 document.getElementById("favNotes").value="";
 document.getElementById("favCostco").value="";
 document.getElementById("favMaceys").value="";
-saveData();renderFavorites();alert("Favorite saved!");
+document.getElementById("favCategory").value="Mexican";
+}
+
+function cancelFavoriteEdit(){
+resetFavoriteForm();
 }
 
 function deleteFavorite(i){
 if(!confirm("Delete this favorite meal?"))return;
 state.favorites.splice(i,1);
+if(editingFavoriteIndex===i)resetFavoriteForm();
 saveData();renderFavorites();
 }
 
@@ -430,6 +487,7 @@ body+=`<div class="fav-item">
 <div class="mini">Costco: ${(f.costco||[]).map(escapeHtml).join(", ")||"none"}</div>
 <div class="mini">Macey's: ${(f.maceys||[]).map(escapeHtml).join(", ")||"none"}</div>
 </div>
+<button type="button" class="small-btn edit" onclick="editFavorite(${f.index})">Edit</button>
 <button type="button" class="small-btn delete" onclick="deleteFavorite(${f.index})">x</button>
 </div>`;
 });
@@ -444,7 +502,7 @@ function addGrocery(store){
 let inputId=store==="costco"?"costcoItem":"maceysItem";
 let item=document.getElementById(inputId).value.trim();
 if(!item)return;
-state[store].push({text:item,done:false});
+state[store].push({text:item,done:false,color:"#ddd"});
 document.getElementById(inputId).value="";
 saveData();renderGroceries();
 }
@@ -464,9 +522,14 @@ let list=state[store]||[];
 let elementId=store==="costco"?"costcoList":"maceysList";
 let html="";
 list.forEach((g,i)=>{
-html+=`<div class="grocery-item">
+let color=g.color||"#ddd";
+let source=g.day ? `${g.day} • ${g.meal||"Meal"}` : "Manual item";
+html+=`<div class="grocery-item" style="--itemColor:${color}">
 <input type="checkbox" style="width:auto" ${g.done?"checked":""} onchange="toggleGrocery('${store}',${i})">
-<span style="flex:1;text-decoration:${g.done?"line-through":"none"}">${escapeHtml(g.text)}</span>
+<div style="flex:1">
+<span style="text-decoration:${g.done?"line-through":"none"}">${escapeHtml(g.text)}</span>
+<div class="mini">${escapeHtml(source)}</div>
+</div>
 <button type="button" class="small-btn" onclick="deleteGrocery('${store}',${i})">x</button>
 </div>`;
 });
@@ -498,7 +561,9 @@ window.closeMealPicker=closeMealPicker;
 window.toggleCategory=toggleCategory;
 window.selectFavorite=selectFavorite;
 window.updateEmoji=updateEmoji;
-window.addFavorite=addFavorite;
+window.addOrUpdateFavorite=addOrUpdateFavorite;
+window.editFavorite=editFavorite;
+window.cancelFavoriteEdit=cancelFavoriteEdit;
 window.deleteFavorite=deleteFavorite;
 window.addGrocery=addGrocery;
 window.toggleGrocery=toggleGrocery;
